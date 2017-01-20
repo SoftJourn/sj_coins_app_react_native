@@ -1,0 +1,3 @@
+rootProject.name = 'SJCoins'
+
+include ':app'
