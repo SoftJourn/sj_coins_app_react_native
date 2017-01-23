@@ -22,7 +22,7 @@ import {
 } from 'react-native';
 
 var { connect } = require('react-redux');
-var {changeConnection} = require('./actions');
+//var {switchTab} = require('./actions');
 
 var LoginComponent = require('./components/Login');
 var TabsView = require('./components/TabsView');
@@ -31,7 +31,6 @@ import Style from "./Style";
 
 class AppNavigator extends Component {
   state: {
-    initialRoute: Object;
   };
 
   props: {
@@ -43,7 +42,21 @@ class AppNavigator extends Component {
   constructor() {
     super();
     this._handlers = [];
-    this.state = { isIOS : Platform.OS === 'ios', initialRoute: {passcode: false} };
+    this.state = { isIOS : Platform.OS === 'ios' };
+  }
+
+  componentWillReceiveProps(nextProps: Object) {
+    global.LOG('navigator WillReceiveProps: ', nextProps.user);
+    // if (this.props.user !== nextProps.user && nextProps.user.isLoggedIn && !!nextProps.user.access_token) {
+    //   //global.LOG('navigator props: ',nextProps);
+    //
+    //   // this.navigator.immediatelyResetRouteStack([{
+    //   //   tabs: true,
+    //   //   homeTab: 'home'
+    //   // }]);
+    //
+    // }
+
   }
 
   componentDidMount() {
@@ -51,16 +64,18 @@ class AppNavigator extends Component {
 
     global.storage.load({
       key: 'userData',
-    }).then(userData => {
+    }).then(storageData => {
 
       if (this.navigator) {
-        if (!!userData.data.token) {
-          this.navigator.immediatelyResetRouteStack([{
-            dashboard: true,
-            token: userData.data.token,
-          }]);
-        } else if (!!userData.data.url) {
-          this.navigator.immediatelyResetRouteStack([{login: true}])
+        if (!!storageData.userData) {
+
+          // this.navigator.resetTo({
+          //   tabs: true,
+          //   login: false,
+          //   homeTab: 'home'
+          // });
+        } else {
+          //this.navigator.immediatelyResetRouteStack([{login: true}])
         }
 
       }
@@ -68,7 +83,7 @@ class AppNavigator extends Component {
       console.log(err.message);
 
       if (this.navigator) {
-        this.navigator.immediatelyResetRouteStack([{login: true}])
+        //this.navigator.immediatelyResetRouteStack([{login: true}])
       }
     });
   }
@@ -130,7 +145,7 @@ class AppNavigator extends Component {
           }
           return Navigator.SceneConfigs.PushFromRight;
         }}
-        initialRoute={{login: true}}
+        initialRoute={{tabs: true, homeTab: 'home'}}
         renderScene={this.renderScene.bind(this)}
         //onDidFocus={this._onDidFocus.bind(this)}
       />
@@ -151,7 +166,7 @@ class AppNavigator extends Component {
     }
 
     if (route.tabs) {
-      return (<TabsView navigator={navigator} />);
+      return (<TabsView navigator={navigator} route={route} />);
     }
 
   }
@@ -172,7 +187,7 @@ var styles = StyleSheet.create({
 
 function select(store) {
   return {
-    user: store.user
+    isLoggedIn: store.user.isLoggedIn
   };
 }
 

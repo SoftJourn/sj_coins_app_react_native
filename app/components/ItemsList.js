@@ -14,12 +14,13 @@ import {
   InteractionManager,
   Image,
   ListView,
+  Navigator,
   RecyclerViewBackedScrollView
 } from 'react-native';
 
 var { connect } = require('react-redux');
 //var {  } = require('./../actions');
-var Navigator = require('Navigator');
+//var Navigator = require('Navigator');
 import NavigationBar from 'react-native-navbar';
 // We Import our Stylesheet
 import Style from "./../Style";

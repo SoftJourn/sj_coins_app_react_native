@@ -10,10 +10,11 @@ import {
   TouchableHighlight,
   Platform,
   InteractionManager,
+  Navigator,
   TabBarIOS
 } from 'react-native';
 
-var Navigator = require('Navigator');
+//var Navigator = require('Navigator');
 var { switchTab } = require('../actions');
 var { connect } = require('react-redux');
 
@@ -30,6 +31,17 @@ class TabsView extends React.Component {
     onTabSelect: (tab: Tab) => void;
     navigator: Navigator;
   };
+
+  constructor(props) {
+    super(props);
+
+    !!props.route.homeTab && this.props.onTabSelect(props.route.homeTab);
+    this.state = {isIOS : true};
+  }
+
+  componentWillReceiveProps(nextProps: Object) {
+    //global.LOG('WillReceive tabs props: ',nextProps.tab);
+  }
 
   onTabSelect(tab: Tab) {
     if (this.props.tab !== tab) {

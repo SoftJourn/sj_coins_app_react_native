@@ -81,6 +81,16 @@ global.timeout = async (ms: number): Promise<any> => {
   });
 };
 
+global.prepareFormData = (params) => {
+  var formBody = [];
+  for (var property in params) {
+    var encodedKey = encodeURIComponent(property);
+    var encodedValue = encodeURIComponent(params[property]);
+    formBody.push(encodedKey + "=" + encodedValue);
+  }
+  return formBody.join("&");
+};
+
 const storage = new Storage({
 
   size: 1000, // maximum capacity, default 1000

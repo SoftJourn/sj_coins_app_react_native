@@ -15,12 +15,13 @@ import {
   Image,
   NetInfo,
   ListView,
+  Navigator,
   RecyclerViewBackedScrollView
 } from 'react-native';
 
 var { connect } = require('react-redux');
 var { getProjects,logout, autoLogin, cacheAudits, cacheTemplates, changeConnection } = require('./../actions');
-var Navigator = require('Navigator');
+//var Navigator = require('Navigator');
 import NavigationBar from 'react-native-navbar';
 // We Import our Stylesheet
 import Style from "./../Style";
@@ -154,7 +155,7 @@ class ProjectsComponent extends Component {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Style.WHITE_COLOR,
+    backgroundColor: Style.ROW_BACKGROUND,
   },
   welcomeText: {
     textAlign: 'center',

@@ -15,12 +15,13 @@ import {
   Alert,
   StatusBar,
   InteractionManager,
+  Navigator,
   KeyboardAvoidingView
 } from 'react-native';
 import ReactNative from 'react-native';
 
 var { connect } = require('react-redux');
-var Navigator = require('Navigator');
+//var Navigator = require('Navigator');
 import NavigationBar from 'react-native-navbar';
 // We Import our Stylesheet
 import Style from "./../Style";

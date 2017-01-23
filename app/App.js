@@ -24,6 +24,8 @@ var {changeConnection} = require('./actions');
 var AppNavigator = require('./AppNavigator');
 import Style from "./Style";
 
+var LoginComponent = require('./components/Login');
+
 class PMVitalsApp extends Component {
 
   state: {
@@ -31,6 +33,7 @@ class PMVitalsApp extends Component {
 
   props: {
     changeConnection: (connection: string) => void,
+    isLoggedIn: boolean;
   };
 
   _handlers: [() => boolean];
@@ -71,6 +74,9 @@ class PMVitalsApp extends Component {
 
 
   render() {
+    if (!this.props.isLoggedIn) {
+      return <LoginComponent />
+    }
     return (
       <AppNavigator />
     );
@@ -96,7 +102,8 @@ const styles = StyleSheet.create({
 
 function select(store) {
   return {
-    connectionInfo: store.device.connection
+    connectionInfo: store.device.connection,
+    isLoggedIn: store.user.isLoggedIn
   };
 }
 

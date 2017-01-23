@@ -14,12 +14,14 @@ import {
   InteractionManager,
   Image,
   Switch,
+  Navigator,
+  Animated,
   KeyboardAvoidingView
 } from 'react-native';
 
 var { connect } = require('react-redux');
 var { login } = require('./../actions');
-var Navigator = require('Navigator');
+//var Navigator = require('Navigator');
 var dismissKeyboard = require('dismissKeyboard');
 import NavigationBar from 'react-native-navbar';
 // We Import our Stylesheet
@@ -46,13 +48,15 @@ class LoginComponent extends Component {
   constructor(props) {
     super(props);
     this.state = {isIOS : Platform.OS === 'ios', animating: false,
-    username: '', password: '', };
+    username: '', password: '', anim: new Animated.Value(0) };
   }
 
   componentWillMount() {
   }
 
   componentDidMount() {
+    Animated.timing(this.state.anim, {toValue: 3000, duration: 3000}).start();
+
     InteractionManager.runAfterInteractions(() => {
     });
   }
@@ -63,17 +67,17 @@ class LoginComponent extends Component {
       <Text lineBreakMode="tail" numberOfLines={1} style={Style.globalStyle.navBarTitleText}>{'Sign In'}</Text></View>;
 
     return (
-      <View style={styles.container}>
+      <Animated.View style={[styles.container, this.fadeIn(700)]}>
         <NavigationBar style={{backgroundColor: Style.NAVBAR_BACKGROUND, height: 44 * Style.RATIO_X}}
         statusBar={{style: 'light-content', tintColor: Style.STATUSBAR_BACKGOUND}} title={titleConfig}/>
         <KeyboardAvoidingView behavior={'padding'} style={styles.wrapper}>
 
-          <View style={{flex: 1, justifyContent: 'center'}}>
+          <Animated.View style={[{flex: 1, justifyContent: 'center'}, this.fadeIn(1200, 20)]}>
             <Image style={{width: 230 * Style.RATIO_X, height: 265 * Style.RATIO_X}}
-              source={require('./../../resources/images/vending_machine.png')} />
-          </View>
+                   source={require('./../../resources/images/vending_machine.png')} />
+          </Animated.View>
 
-          <View style={{flex: 1}}>
+          <Animated.View style={[{flex: 1 }, this.fadeIn(2500, 20)]}>
             <View style={styles.inputWrapper}>
             <Image style={styles.inputImage}
               source={require('./../../resources/images/user.png')} />
@@ -97,18 +101,36 @@ class LoginComponent extends Component {
             <TouchableHighlight style={styles.button} onPress={this.makeLogin.bind(this)} underlayColor={Style.BUTTON_ACTIVE_COLOR}>
               <Text style={styles.buttonText}>{'Submit'}</Text>
             </TouchableHighlight>
-          </View>
+          </Animated.View>
 
         </KeyboardAvoidingView>
 
         <Spinner visible={this.state.animating} color={Style.STATUSBAR_BACKGOUND} />
-      </View>
+      </Animated.View>
     );
   }
 
   makeLogin() {
     dismissKeyboard();
     this.login();
+  }
+
+  fadeIn(delay, from = 0) {
+    const {anim} = this.state;
+    return {
+      opacity: anim.interpolate({
+        inputRange: [delay, Math.min(delay + 500, 3000)],
+        outputRange: [0, 1],
+        extrapolate: 'clamp',
+      }),
+      transform: [{
+        translateY: anim.interpolate({
+          inputRange: [delay, Math.min(delay + 500, 3000)],
+          outputRange: [from, 0],
+          extrapolate: 'clamp',
+        }),
+      }],
+    };
   }
 
   async login() {
@@ -137,13 +159,14 @@ class LoginComponent extends Component {
       setTimeout( () => alert('Attention', message) , 300);
       return;
     } finally {
-      this.setState({animating: false});
+      //this.setState({animating: false});
     }
 
-    this.props.navigator.immediatelyResetRouteStack([{
-      tabs: true,
-      //access_token: this.props.user.access_token
-    }])
+    // setTimeout( () => {
+    //   this.props.navigator.resetTo({
+    //     tabs: true
+    //   })
+    // }, 200);
 
   }
 
@@ -153,7 +176,7 @@ class LoginComponent extends Component {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Style.BACKGROUND_COLOR,
+    backgroundColor: Style.ROW_BACKGROUND,
   },
   wrapper :{
     flex: 1,
@@ -167,11 +190,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 5,
     marginVertical: 7 * Style.RATIO_X,
-  },
-  switchWrapper: {
-    marginVertical: 7 * Style.RATIO_X,
-    flexDirection: 'row',
-    alignItems: 'center'
   },
   input: {
     flex: 1,
@@ -199,11 +217,6 @@ const styles = StyleSheet.create({
     margin: 0,
     fontSize: Style.FONT_SIZE
   },
-  switchText: {
-    paddingHorizontal: 10,
-    color: Style.WHITE_COLOR,
-    fontSize: Style.FONT_SIZE
-  }
 });
 
 function select(store) {

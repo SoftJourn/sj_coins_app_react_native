@@ -8,7 +8,6 @@ import type { Action, ThunkAction, PromiseAction } from './types';
 
 function login(username: string, password: string) : ThunkAction {
   return (dispatch, getState) => {
-    //let {APIURL, rememberMe} = getState().user;
     let {connection} = getState().device;
     const login = new Promise((resolve, reject) => {
       if (connection.toLowerCase() === 'none') {
@@ -20,9 +19,6 @@ function login(username: string, password: string) : ThunkAction {
 
     login.then(
       (result) => {
-        //result.rememberMe = rememberMe;
-        //dispatch(saveAuthToken(result.token))
-        //dispatch(saveUserCredentials(username, password));
         dispatch(loginSuccess(result));
       }, (fail) => {
       }
@@ -31,38 +27,37 @@ function login(username: string, password: string) : ThunkAction {
   };
 }
 
-function autoLogin() : ThunkAction {
+function refreshToken() : ThunkAction {
   return (dispatch, getState) => {
-    let {APIURL, rememberMe, username, password} = getState().user;
-    const autoLogin = new Promise((resolve, reject) => {
+    let {refresh_token} = getState().user;
+    const refreshToken = new Promise((resolve, reject) => {
 
-      if (!username || !password) {
-        let message = 'Can\'t make auto login. There are no saved user credentials';
+      if (!refresh_token) {
+        let message = 'Can\'t refresh token. There is no saved refresh token';
         reject( new Error(message) );
       }
-      _apiRequestLogin(username, password, APIURL, resolve, reject);
+      _apiRequestRefreshToken(refresh_token, resolve, reject);
     });
 
-    autoLogin.then(
+    refreshToken.then(
       (result) => {
-        result.rememberMe = true;
         dispatch(loginSuccess(result));
       }, (fail) => {
       }
     );
-    return autoLogin;
+    return refreshToken;
   };
 }
 
 function logout(): ThunkAction {
   return (dispatch, getState) => {
-    let {APIURL, token} = getState().user;
+    let {access_token, refresh_token} = getState().user;
     let {connection} = getState().device;
     const logoutPromise = new Promise((resolve, reject) => {
       if (connection.toLowerCase() === 'none' || connection.toLowerCase() === 'unknown') {
         reject(new Error('Sorry, You can\'t logout while you are offline'));
       } else {
-        _apiRequestLogout(APIURL, token, resolve, reject);
+        _apiRequestLogout(access_token, refresh_token, resolve, reject);
       }
     });
 
@@ -70,39 +65,11 @@ function logout(): ThunkAction {
       (result) => {
         dispatch(userLogOut());
       }, (fail) => {
+        dispatch(userLogOut());
       }
     );
     return logoutPromise;
   };
-}
-
-async function _apiRequestPasscode(passcode, resolve, reject) {
-  var params = {
-    'SiteAccessToken': passcode,
-  };
-  var formData = prepareFromData(params);
-
-  try {
-    let response = await fetch(`${global.BASE_URL}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: formData
-    });
-    var responseJson = await response.json();
-    console.log(responseJson);
-    if (response.status == 200) {
-       resolve(responseJson);
-    } else {
-      let message = !!responseJson.Message ? responseJson.Message : 'Something went wrong';
-      reject( new Error(message) );
-    }
-
-  } catch(error) {
-    console.error(error);
-    reject(error);
-  }
 }
 
 async function _apiRequestLogin(username, password, resolve, reject) {
@@ -111,9 +78,8 @@ async function _apiRequestLogin(username, password, resolve, reject) {
     'password': password,
     'grant_type': 'password'
   };
-
   global.LOG(params);
-  var formData = prepareFromData(params);
+  var formData = global.prepareFormData(params);
 
   try {
     let response = await fetch(`${global.BASE_URL}/auth/oauth/token`, {
@@ -124,73 +90,93 @@ async function _apiRequestLogin(username, password, resolve, reject) {
       },
       body: formData
     });
-    console.log(response);
+    //console.log(response);
     var responseJson = await response.json();
     console.log(responseJson);
     if (response.status == 200) {
       resolve(responseJson);
-
     } else {
-      let message = !!responseJson.Message ? responseJson.Message : 'Something went wrong';
+      let message = !!responseJson.Message ? responseJson.error : 'Something went wrong';
       reject( new Error(message) );
     }
 
   } catch(error) {
-    console.error(error);
+    console.log(error);
     reject(error);
   }
 }
 
-async function _apiRequestLogout(url, token, resolve, reject) {
+async function _apiRequestRefreshToken(refresh_token, resolve, reject) {
+  let params = {
+    'refresh_token': refresh_token,
+    'grant_type' : 'refresh_token'
+  };
+  let formData = global.prepareFormData(params);
+
   try {
-    let response = await fetch(`${url}/Authorize`, {
-      method: 'DELETE',
+    let response = await fetch(`${global.BASE_URL}/auth/oauth/token`, {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        '.ASPXAUTH' : token
-      }
+        'Authorization': 'Basic dXNlcl9jcmVkOnN1cGVyc2VjcmV0'
+      },
+      body: formData
     });
-    var responseJson = await response.json();
+    let responseJson = await response.json();
     console.log(responseJson);
     if (response.status == 200) {
-      resolve(responseJson)
+      resolve(responseJson);
     } else {
-      let message = !!responseJson.Message ? responseJson.Message : 'Something went wrong';
+      let message = !!responseJson.Message ? responseJson.error : 'Something went wrong';
+      reject( new Error(message) );
+    }
+
+  } catch(error) {
+    console.log(error);
+    reject(error);
+  }
+}
+
+async function _apiRequestLogout(access_token, refresh_token, resolve, reject) {
+  let params = {
+    token_value: refresh_token
+  };
+  let formData = global.prepareFormData(params);
+  try {
+    let response = await fetch(`${global.BASE_URL}/auth/oauth/token/revoke`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization' : `Bearer ${access_token}`
+      },
+      body: formData
+    });
+    console.log(response);
+
+    if (response.status == 204) {
+      resolve()
+    } else {
+      let responseJson = await response.json();
+      console.log(responseJson);
+      let message = !!responseJson.Message ? responseJson.error : 'Something went wrong';
       let error: Object = new Error(message);
       error.status = response.status;
       reject( error );
     }
 
   } catch(error) {
-    console.error(error);
+    console.log(error);
     reject(error);
   }
 }
 
-function prepareFromData(params) {
-  var formBody = [];
-  for (var property in params) {
-    var encodedKey = encodeURIComponent(property);
-    var encodedValue = encodeURIComponent(params[property]);
-    formBody.push(encodedKey + "=" + encodedValue);
-  }
-
-  return formBody.join("&");
-}
-
-function setRememberMe(rememberMe: boolean): Action {
-  return {
-    type: 'SET_REMEMBER_ME',
-    rememberMe
-  }
-}
 
 function loginSuccess(data: Object): ThunkAction {
   return (dispatch, getState) => {
     global.storage.save({
       key: 'userData',
       rawData: {
-        data: data
+        userData: data
       }
     });
 
@@ -201,44 +187,28 @@ function loginSuccess(data: Object): ThunkAction {
   }
 }
 
-function saveAuthToken(token: string): Action {
-  return {
-    type: 'SAVE_TOKEN',
-    token
-  }
-}
-
-function saveUserCredentials(username: string, password: string): Action {
-  return {
-    type: 'SAVE_CREDENTIALS',
-    username,
-    password
-  }
-}
-
 function userLogOut(): ThunkAction {
   return (dispatch, getState) => {
+
+    global.LOG('user LOGOUT');
 
     global.storage.load({
       key: 'userData',
     }).then(userData => {
-      userData.data.token = null;
-      //userData.data.rememberMe = false;
+      //userData.data.token = null;
       global.storage.save({
         key: 'userData',
         rawData: {
-          data: userData.data
+          userData: null
         }
       });
     }).catch(err => {console.log(err.message)});
 
-    //dispatch(setRememberMe(false));
-
-    return {
+    return dispatch({
       type: 'LOGGED_OUT',
-    }
+    });
   }
 
 }
 
-module.exports = { setRememberMe, login, logout, autoLogin };
+module.exports = { login, logout, refreshToken };

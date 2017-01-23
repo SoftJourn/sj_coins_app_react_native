@@ -11,12 +11,13 @@ import {
   Text,
   TouchableHighlight,
   Platform,
+  Navigator,
   InteractionManager,
 } from 'react-native';
 
 import DrawerLayout from '../common/DrawerLayout';
 import MenuItem from '../common/MenuItem';
-var Navigator = require('Navigator');
+//var Navigator = require('Navigator');
 var { switchTab } = require('../actions');
 var { connect } = require('react-redux');
 
