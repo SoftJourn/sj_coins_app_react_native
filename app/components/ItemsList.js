@@ -19,8 +19,7 @@ import {
 } from 'react-native';
 
 var { connect } = require('react-redux');
-//var {  } = require('./../actions');
-//var Navigator = require('Navigator');
+var { getProducts, refreshToken } = require('./../actions');
 import NavigationBar from 'react-native-navbar';
 // We Import our Stylesheet
 import Style from "./../Style";
@@ -38,6 +37,8 @@ class ItemsListComponent extends Component {
     navigator: Navigator;
     route: Object;
     connectionInfo: string;
+    getProducts: () => Promise<any>;
+    refreshToken: () => Promise<any>;
   };
 
   static contextTypes = {
@@ -46,18 +47,23 @@ class ItemsListComponent extends Component {
 
   constructor(props) {
     super(props);
+    const {products} = this.props;
     var ds = new ListView.DataSource({rowHasChanged: (r1, r2) => r1 !== r2});
-    this.state = {dataSource: ds.cloneWithRows([]), isIOS : Platform.OS === 'ios',
+    this.state = {dataSource: ds.cloneWithRows(products), isIOS : Platform.OS === 'ios',
       animating: false, };
   }
 
   componentDidMount() {
     InteractionManager.runAfterInteractions(() => {
-      //this.getItems();
+      this.getItems();
     });
   }
 
   componentWillReceiveProps(nextProps: Object) {
+    if (this.props.products !== nextProps.products) {
+      //global.LOG('nextProps.products ', nextProps.products);
+      this.setState({dataSource: this.state.dataSource.cloneWithRows(nextProps.products)});
+    }
   }
 
   render() {
@@ -72,7 +78,8 @@ class ItemsListComponent extends Component {
       <View style={styles.container}>
         <NavigationBar style={{backgroundColor: Style.NAVBAR_BACKGROUND, height: 44 * Style.RATIO_X}}
                        statusBar={{style: 'light-content', tintColor: Style.STATUSBAR_BACKGOUND}}
-                       title={titleConfig} />
+                       title={titleConfig}
+        />
         {isOffline ? <View style={Style.globalStyle.offlineView}><Text style={Style.globalStyle.offlineText}>{Style.OFFLINE_TEXT}</Text></View> : null}
 
         { !this.state.isIOS ? <TouchableHighlight style={{backgroundColor: Style.ROW_BACKGROUND, width: 150, height: 40, justifyContent: 'center', alignItems: 'center'}}
@@ -81,11 +88,15 @@ class ItemsListComponent extends Component {
         </TouchableHighlight> : null}
 
         <ListView
+          style={{flex: 1}}
           dataSource={this.state.dataSource}
           //renderHeader={this.renderHeader.bind(this)}
           renderRow={this._renderRow.bind(this)}
           enableEmptySections={true}
-          renderScrollComponent={props => <RecyclerViewBackedScrollView {...props} />}
+          automaticallyAdjustContentInsets={false}
+          contentInset={{bottom:49}}
+          removeClippedSubviews={false}
+          //renderScrollComponent={props => <RecyclerViewBackedScrollView {...props} />}
           renderSeparator={this._renderSeperator}
         />
 
@@ -94,20 +105,30 @@ class ItemsListComponent extends Component {
     );
   }
 
-  // renderHeader() {
-  //   return (<View style={styles.tableHeaderView}>
-  //     <View style={{flex: 0.6}}><Text style={styles.headerText}>{'Name'}</Text></View>
-  //     <View style={{flex: 0.4}}><Text style={styles.headerText}>{'Created Date'}</Text></View>
-  //   </View>)
-  // }
+  renderHeader() {
+    return (<View style={styles.tableHeaderView}>
+      <View style={{flex: 0.6}}><Text style={styles.headerText}>{'Name'}</Text></View>
+      <View style={{flex: 0.4}}><Text style={styles.headerText}>{'Created Date'}</Text></View>
+    </View>)
+  }
 
   _renderRow(rowData: Object, sectionID: number, rowID: number, highlightRow: (sectionID: number, rowID: number) => void) {
     return (
-      <TouchableHighlight style={styles.row} underlayColor={'transparent'} activeOpacity={0.4} onPress={() => { this._pressRow(rowData); }}>
-        <View style={styles.rowWrapper}>
-
+      <View style={styles.rowWrapper}>
+        <View style={{justifyContent: 'center',}}>
+          <Image style={styles.rowIcon} source={{uri: `${global.BASE_URL}/vending/v1/${rowData.imageUrl}`}} />
         </View>
-      </TouchableHighlight>
+        <View style={{flex: 1, justifyContent: 'center'}}>
+          <Text>{rowData.name}</Text>
+        </View>
+
+        <View>
+          <TouchableHighlight style={styles.buyButton} underlayColor={'transparent'} activeOpacity={0.4} onPress={(rowData) => { this.onBuyPress(rowData); }}>
+            <Text>{'Buy'}</Text>
+          </TouchableHighlight>
+        </View>
+
+      </View>
     );
   }
 
@@ -127,37 +148,38 @@ class ItemsListComponent extends Component {
     this.context.openDrawer();
   }
 
-  _pressRow(rowData: Object) {
+  onBuyPress(rowData: Object) {
 
-    //this.props.navigator.push({});
   }
 
 
 
-  // async getItems() {
-  //   this.setState({animating: true});
-  //   try {
-  //     await Promise.race([
-  //       this.props.getItemsData(),
-  //       global.timeout(20000)
-  //     ]);
-  //   } catch (e) {
-  //     const message = e.message || e;
-  //
-  //     if (e.status == 401) {
-  //       //this.navigateToLogin();
-  //     }
-  //     setTimeout( () => alert('Attention', message) , 300);
-  //     console.log(message || e);
-  //     return;
-  //   } finally {
-  //     this.setState({animating: false});
-  //   }
-  //
-  //   let templates = this.props.templates.Data;
-  //   this.setState({dataSource: this.state.dataSource.cloneWithRows(templates)});
-  //
-  // }
+  async getItems() {
+    this.setState({animating: true});
+    try {
+      await Promise.race([
+        this.props.getProducts(),
+        global.timeout(20000)
+      ]);
+    } catch (e) {
+      const message = e.message || e;
+
+      if (e.status == 401) {
+        global.LOG('Anuthorized');
+        this.props.refreshToken().then(() => this.getItems()).catch((e) => { console.log( e.message); });
+        return;
+      }
+      setTimeout( () => alert('Attention', message) , 300);
+      console.log(message || e);
+      return;
+    } finally {
+      this.setState({animating: false});
+    }
+
+    // let templates = this.props.templates.Data;
+    // this.setState({dataSource: this.state.dataSource.cloneWithRows(templates)});
+
+  }
   //
   // navigateToLogin() {
   //   setTimeout( () => {
@@ -180,18 +202,21 @@ const styles = StyleSheet.create({
     backgroundColor: Style.HEADER_BACKGROUND,
     height: 48 * Style.RATIO_X,
   },
-  row: {
-    height: 44 * Style.RATIO_X
-  },
   rowWrapper: {
     flex: 1,
     flexDirection: 'row',
-    alignItems: 'center'
+    justifyContent: 'center',
+    //alignItems: 'center'
   },
   rowIcon: {
-    width: 12 * Style.RATIO_X,
+    width: 22 * Style.RATIO_X,
     height: 22 * Style.RATIO_X,
     marginHorizontal: 7 * Style.RATIO_X
+  },
+  buyButton: {
+    height: 40 * Style.RATIO_X,
+    justifyContent: 'center',
+    marginHorizontal: 7 * Style.RATIO_X,
   },
   headerText: {
     marginHorizontal: 7 * Style.RATIO_X,
@@ -206,13 +231,15 @@ const styles = StyleSheet.create({
 
 function select(store) {
   return {
-    connectionInfo: store.device.connection
+    connectionInfo: store.device.connection,
+    products: store.products.products
   };
 }
 
 function actions(dispatch) {
   return {
-    //autoLogin: () => dispatch(autoLogin())
+    getProducts: () => dispatch(getProducts()),
+    refreshToken: () => dispatch(refreshToken())
   }
 }
 
