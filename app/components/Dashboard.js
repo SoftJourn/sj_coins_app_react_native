@@ -10,7 +10,7 @@ import {
   TouchableHighlight,
   Platform,
   TextInput,
-  ToolbarAndroid,
+  ScrollView,
   InteractionManager,
   Image,
   NetInfo,
@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 
 var { connect } = require('react-redux');
-var { getProjects,logout, autoLogin, cacheAudits, cacheTemplates, changeConnection } = require('./../actions');
+var { getFeatures, refreshToken } = require('./../actions');
 //var Navigator = require('Navigator');
 import NavigationBar from 'react-native-navbar';
 // We Import our Stylesheet
@@ -35,10 +35,13 @@ class ProjectsComponent extends Component {
 
   props: {
     navigator: Navigator;
-    changeConnection: (connection: string) => void;
     route: Object;
     connectionInfo: string;
     isLoggedIn: boolean;
+    profile: Object;
+    getFeatures: () => Promise<any>;
+    refreshToken: () => Promise<any>;
+    features: Object;
   };
 
   static contextTypes = {
@@ -49,25 +52,21 @@ class ProjectsComponent extends Component {
   constructor(props) {
     super(props);
 
-    this.state = { isIOS : Platform.OS === 'ios',
+    var ds = new ListView.DataSource({rowHasChanged: (r1, r2) => r1 !== r2});
+    this.state = {dataSource: ds.cloneWithRows([]), isIOS : Platform.OS === 'ios',
     animating: false};
   }
 
   componentWillReceiveProps(nextProps: Object) {
+    if (this.props.features !== nextProps.features) {
+      global.LOG('nextProps.features ', nextProps.features.categories);
+      this.setState({dataSource: this.state.dataSource.cloneWithRows(nextProps.features.categories)});
+    }
   }
 
   componentDidMount() {
     InteractionManager.runAfterInteractions(() => {
-      if (this.props.isLoggedIn) {
-        //this.loadProjects();
-      }
-
-    });
-  }
-
-  loadProjects() {
-    NetInfo.isConnected.fetch().then(isConnected => {
-      isConnected && this.getProjects();
+      this.loadFeatures();
     });
   }
 
@@ -95,8 +94,57 @@ class ProjectsComponent extends Component {
           <Text>{'Open Menu'}</Text>
         </TouchableHighlight> : null}
 
+        <ListView
+          style={{flex: 1}}
+          dataSource={this.state.dataSource}
+          //renderHeader={this.renderHeader.bind(this)}
+          renderRow={this._renderRow.bind(this)}
+          enableEmptySections={true}
+          automaticallyAdjustContentInsets={false}
+          contentInset={{bottom:49}}
+          removeClippedSubviews={false}
+          //renderScrollComponent={props => <RecyclerViewBackedScrollView {...props} />}
+          renderSeparator={this._renderSeperator}
+        />
+
         <Spinner visible={this.state.animating} color={Style.STATUSBAR_BACKGOUND} />
       </View>
+    );
+  }
+
+  _renderRow(rowData: Object, sectionID: number, rowID: number, highlightRow: (sectionID: number, rowID: number) => void) {
+
+    let products = rowData.products.map((product) => {
+      return (
+          <TouchableHighlight key={`${rowData.name}_${product.id}`} style={styles.featureItemButton} underlayColor={'transparent'} activeOpacity={0.4} onPress={(product) => { this.onBuyPress(product); }}>
+            <View>
+              <Image style={styles.rowIcon} source={{uri: `${global.BASE_URL}/vending/v1/${product.imageUrl}`}} />
+              <Text>{product.name}</Text>
+              <Text>{product.price}</Text>
+            </View>
+
+          </TouchableHighlight>
+        )
+    });
+
+    return (
+      <View style={styles.rowWrapper}>
+
+        <View style={{height: 35}}>
+          <Text>{rowData.name}</Text>
+        </View>
+        <ScrollView horizontal={true}>
+          {products}
+        </ScrollView>
+      </View>
+    );
+  }
+
+  _renderSeperator(sectionID: number, rowID: number, adjacentRowHighlighted: bool) {
+    return (
+      <View key={`${sectionID}-${rowID}`}
+            style={{ height: 1, backgroundColor: Style.SEPARATOR_LINE }}
+      />
     );
   }
 
@@ -104,43 +152,34 @@ class ProjectsComponent extends Component {
     this.context.openDrawer();
   }
 
+  onBuyPress(rowData: Object) {
 
-  logoutPromt() {
-    global.alertWithPromt(null, 'Are you sure you want to log out?', this.logOut.bind(this), null);
   }
 
+  async loadFeatures() {
+    this.setState({animating: true});
+    try {
+        await Promise.race([
+          this.props.getFeatures(),
+          global.timeout(20000)
+        ]);
+    } catch (e) {
+      const message = e.message || e;
+      console.log(message || e);
 
+      if (e.status == 401) {
+        global.LOG('Anuthorized');
+        this.props.refreshToken().then(() => this.loadFeatures()).catch((e) => { alert('Attention', e.message); });
+        return;
+      }
 
-  // async getProjects() {
-  //   this.setState({animating: true});
-  //   try {
-  //       await Promise.race([
-  //         this.props.getProjects(this.props.route.APIURL, this.props.route.token),
-  //         global.timeout(20000)
-  //       ]);
-  //   } catch (e) {
-  //     const message = e.message || e;
-  //     console.log(message || e);
-  //
-  //     if (e.status == 401) {
-  //         if (this.props.rememberMe) {
-  //           global.LOG('Anuthorized');
-  //           this.props.autoLogin().then(() => this.getProjects()).catch((e) => { alert('Attention', e.message); });
-  //           return;
-  //         } else {
-  //           this.navigateToLogin();
-  //         }
-  //     }
-  //
-  //     setTimeout( () => alert('Attention', message) , 300);
-  //     return;
-  //   } finally {
-  //     this.setState({animating: false});
-  //   }
-  //   this.setState({dataSource: this.state.dataSource.cloneWithRows(this.props.projects.Data)});
-  //   this.props.cacheTemplates();
-  //   this.props.cacheAudits();
-  // }
+      setTimeout( () => alert('Attention', message) , 300);
+      return;
+    } finally {
+      this.setState({animating: false});
+    }
+
+  }
   //
   // navigateToLogin() {
   //   setTimeout( () => {
@@ -157,6 +196,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Style.ROW_BACKGROUND,
   },
+  rowWrapper: {
+    flex: 1
+  },
   welcomeText: {
     textAlign: 'center',
     color: Style.INPUT_TEXT_COLOR,
@@ -164,11 +206,22 @@ const styles = StyleSheet.create({
     marginVertical: 7,
     fontSize: Style.FONT_SIZE_BIG,
   },
+  rowIcon: {
+    width: 25 * Style.RATIO_X,
+    height: 25 * Style.RATIO_X,
+    marginHorizontal: 7 * Style.RATIO_X
+  },
+  featureItemButton: {
+    flex: 1,
+    width: 100 * Style.RATIO_X
+  }
 });
 
 function select(store) {
   return {
     connectionInfo: store.device.connection,
+    profile: store.profile,
+    features: store.features.features
     //isLoggedIn: store.user.isLoggedIn
   };
 }
@@ -177,7 +230,8 @@ function actions(dispatch) {
   return {
     //logout: () => dispatch(logout()),
     //autoLogin: () => dispatch(autoLogin()),
-    changeConnection: (connectionInfo) => dispatch(changeConnection(connectionInfo))
+    getFeatures: () => dispatch(getFeatures()),
+    refreshToken: () => dispatch(refreshToken())
   }
 }
 

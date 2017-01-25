@@ -39,6 +39,7 @@ class ProfileComponent extends Component {
     logout: () => Promise<any>;
     getProfile: () => Promise<any>;
     refreshToken: () => Promise<any>;
+    profile: Object;
   };
 
   static contextTypes = {

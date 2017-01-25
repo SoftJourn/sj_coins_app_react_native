@@ -39,6 +39,7 @@ class ItemsListComponent extends Component {
     connectionInfo: string;
     getProducts: () => Promise<any>;
     refreshToken: () => Promise<any>;
+    products: Array<Object>;
   };
 
   static contextTypes = {

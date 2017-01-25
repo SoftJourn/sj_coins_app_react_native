@@ -6,32 +6,32 @@
 
 import type { Action, ThunkAction, PromiseAction } from './types';
 
-function getProducts() : ThunkAction {
+function getFeatures() : ThunkAction {
   return (dispatch, getState) => {
     let {connection} = getState().device;
     let {access_token} = getState().user;
-    const getProducts = new Promise((resolve, reject) => {
+    const getFeatures = new Promise((resolve, reject) => {
       if (connection.toLowerCase() === 'none') {
         reject(new Error('Sorry, You can\'t make request while you are offline'));
       } else {
-        _apiRequestGetProducts(access_token, resolve, reject);
+        _apiRequestGetFeatures(access_token, resolve, reject);
       }
     });
 
-    getProducts.then(
+    getFeatures.then(
       (result) => {
-        dispatch(getProductsSuccess(result));
+        dispatch(getFeaturesSuccess(result));
       }, (fail) => {
       }
     );
-    return getProducts;
+    return getFeatures;
   };
 }
 
-async function _apiRequestGetProducts(access_token, resolve, reject) {
+async function _apiRequestGetFeatures(access_token, resolve, reject) {
 
   try {
-    let response = await fetch(`${global.BASE_URL}/vending/v1/machines/9/products`, {
+    let response = await fetch(`${global.BASE_URL}/vending/v1/machines/9/features`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -56,12 +56,12 @@ async function _apiRequestGetProducts(access_token, resolve, reject) {
   }
 }
 
-function getProductsSuccess(products: Array<Object>): Action {
+function getFeaturesSuccess(features: Object): Action {
   return {
-    type: 'GET_PRODUCTS',
-    products
+    type: 'GET_FEATURES',
+    features
   }
 }
 
 
-module.exports = { getProducts };
+module.exports = { getFeatures };

@@ -11,5 +11,6 @@ module.exports = combineReducers({
   device: require('./device'),
   navigation: require('./navigation'),
   profile: require('./profile'),
-  products: require('./products')
+  products: require('./products'),
+  features: require('./features')
 });
