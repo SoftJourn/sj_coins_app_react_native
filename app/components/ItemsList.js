@@ -9,7 +9,7 @@ import {
   View,
   TouchableHighlight,
   Platform,
-  TextInput,
+  RefreshControl,
   ToolbarAndroid,
   InteractionManager,
   Image,
@@ -24,6 +24,7 @@ import NavigationBar from 'react-native-navbar';
 // We Import our Stylesheet
 import Style from "./../Style";
 import Spinner from '../common/Spinner';
+import { SegmentedControls, RadioButtons } from 'react-native-radio-buttons'
 
 
 class ItemsListComponent extends Component {
@@ -31,6 +32,7 @@ class ItemsListComponent extends Component {
     isIOS: boolean;
     animating: boolean;
     dataSource: ListView.DataSource;
+    refreshing: boolean;
   };
 
   props: {
@@ -51,7 +53,7 @@ class ItemsListComponent extends Component {
     const {products} = this.props;
     var ds = new ListView.DataSource({rowHasChanged: (r1, r2) => r1 !== r2});
     this.state = {dataSource: ds.cloneWithRows(products), isIOS : Platform.OS === 'ios',
-      animating: false, };
+      animating: false, refreshing: false, sortingType: 'Name' };
   }
 
   componentDidMount() {
@@ -62,8 +64,8 @@ class ItemsListComponent extends Component {
 
   componentWillReceiveProps(nextProps: Object) {
     if (this.props.products !== nextProps.products) {
-      //global.LOG('nextProps.products ', nextProps.products);
-      this.setState({dataSource: this.state.dataSource.cloneWithRows(nextProps.products)});
+      this.sortList(nextProps.products, this.state.sortingType);
+      //this.setState({dataSource: this.state.dataSource.cloneWithRows(nextProps.products)});
     }
   }
 
@@ -88,15 +90,20 @@ class ItemsListComponent extends Component {
           <Text>{'Open Menu'}</Text>
         </TouchableHighlight> : null}
 
+
+
+
+
         <ListView
           style={{flex: 1}}
           dataSource={this.state.dataSource}
-          //renderHeader={this.renderHeader.bind(this)}
+          renderHeader={this.renderHeader.bind(this)}
           renderRow={this._renderRow.bind(this)}
           enableEmptySections={true}
           automaticallyAdjustContentInsets={false}
           contentInset={{bottom:49}}
           removeClippedSubviews={false}
+          refreshControl={<RefreshControl refreshing={this.state.refreshing} onRefresh={this._onRefresh.bind(this)} />}
           //renderScrollComponent={props => <RecyclerViewBackedScrollView {...props} />}
           renderSeparator={this._renderSeperator}
         />
@@ -107,25 +114,34 @@ class ItemsListComponent extends Component {
   }
 
   renderHeader() {
-    return (<View style={styles.tableHeaderView}>
-      <View style={{flex: 0.6}}><Text style={styles.headerText}>{'Name'}</Text></View>
-      <View style={{flex: 0.4}}><Text style={styles.headerText}>{'Created Date'}</Text></View>
-    </View>)
+    const optionsAcceptable = ['Name', 'Price'];
+
+    return (
+      <View style={[styles.tableHeaderView, {marginHorizontal: this.state.isIOS ? 10 : 0}]}>
+        <SegmentedControls allowFontScaling={false} options={ optionsAcceptable }
+                           tint={Style.BUTTON_COLOR_IOS} selectedTint={'white'} backTint={'white'}
+                           onSelection={ (sortingType) => {this.setState({sortingType}); this.sortList(this.props.products, sortingType)} }
+                           optionStyle={{fontSize: Style.FONT_SIZE}}
+                           renderOptions={RadioButtons.getTextOptionRenderer({fontSize: Style.FONT_SIZE}, {fontSize: Style.FONT_SIZE}, {fontSize: Style.FONT_SIZE})}
+                           selectedOption={ this.state.sortingType === 'Name' ? 'Name' : 'Price' } />
+    </View>
+    )
   }
 
   _renderRow(rowData: Object, sectionID: number, rowID: number, highlightRow: (sectionID: number, rowID: number) => void) {
     return (
       <View style={styles.rowWrapper}>
-        <View style={{justifyContent: 'center',}}>
+        <View style={{justifyContent: 'center', margin: 1}}>
           <Image style={styles.rowIcon} source={{uri: `${global.BASE_URL}/vending/v1/${rowData.imageUrl}`}} />
         </View>
         <View style={{flex: 1, justifyContent: 'center'}}>
           <Text>{rowData.name}</Text>
+          <Text>{rowData.price}</Text>
         </View>
 
         <View>
           <TouchableHighlight style={styles.buyButton} underlayColor={'transparent'} activeOpacity={0.4} onPress={(rowData) => { this.onBuyPress(rowData); }}>
-            <Text>{'Buy'}</Text>
+            <Text style={styles.buyButtonText}>{'Buy'}</Text>
           </TouchableHighlight>
         </View>
 
@@ -153,6 +169,22 @@ class ItemsListComponent extends Component {
 
   }
 
+  _onRefresh() {
+    this.setState({refreshing: true});
+    setTimeout( () => this.getItems(), 400);
+  }
+
+  sortList(items, sortingType) {
+    //todo: fix sorting for price
+    items.sort(function(a,b) {
+      if(a[sortingType.toLowerCase()] < b[sortingType.toLowerCase()]) return -1;
+      if(a[sortingType.toLowerCase()] > b[sortingType.toLowerCase()]) return 1;
+      return 0;
+    });
+
+    let sortedProducts = Object.assign({}, items);
+    this.setState({dataSource: this.state.dataSource.cloneWithRows(sortedProducts)});
+  }
 
 
   async getItems() {
@@ -174,7 +206,7 @@ class ItemsListComponent extends Component {
       console.log(message || e);
       return;
     } finally {
-      this.setState({animating: false});
+      this.setState({animating: false, refreshing: false});
     }
 
     // let templates = this.props.templates.Data;
@@ -198,10 +230,9 @@ const styles = StyleSheet.create({
     backgroundColor: Style.WHITE_COLOR,
   },
   tableHeaderView: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Style.HEADER_BACKGROUND,
-    height: 48 * Style.RATIO_X,
+    flex: 1,
+    marginHorizontal: Platform.OS === 'ios' ? 10 : 0,
+    marginVertical: Platform.OS === 'ios' ? 5 : 0,
   },
   rowWrapper: {
     flex: 1,
@@ -210,14 +241,17 @@ const styles = StyleSheet.create({
     //alignItems: 'center'
   },
   rowIcon: {
-    width: 22 * Style.RATIO_X,
-    height: 22 * Style.RATIO_X,
+    width: 40 * Style.RATIO_X,
+    height: 40 * Style.RATIO_X,
     marginHorizontal: 7 * Style.RATIO_X
   },
   buyButton: {
     height: 40 * Style.RATIO_X,
     justifyContent: 'center',
-    marginHorizontal: 7 * Style.RATIO_X,
+    marginHorizontal: 7 * Style.RATIO_X
+  },
+  buyButtonText: {
+    color: Style.BUTTON_COLOR_IOS
   },
   headerText: {
     marginHorizontal: 7 * Style.RATIO_X,

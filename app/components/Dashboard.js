@@ -9,7 +9,7 @@ import {
   View,
   TouchableHighlight,
   Platform,
-  TextInput,
+  RefreshControl,
   ScrollView,
   InteractionManager,
   Image,
@@ -31,6 +31,7 @@ class ProjectsComponent extends Component {
   state: {
     isIOS: boolean;
     animating: boolean;
+    refreshing: boolean;
   };
 
   props: {
@@ -54,7 +55,7 @@ class ProjectsComponent extends Component {
 
     var ds = new ListView.DataSource({rowHasChanged: (r1, r2) => r1 !== r2});
     this.state = {dataSource: ds.cloneWithRows([]), isIOS : Platform.OS === 'ios',
-    animating: false};
+    animating: false, refreshing: false};
   }
 
   componentWillReceiveProps(nextProps: Object) {
@@ -73,6 +74,7 @@ class ProjectsComponent extends Component {
   render() {
 
     const connection = this.props.connectionInfo;
+    const {profile} = this.props;
     const isOffline = (connection.toLowerCase() === 'none' || connection.toLowerCase() === 'unknown' || !connection);
 
     const titleConfig = <View style={Style.globalStyle.navBarTitleView}>
@@ -88,7 +90,8 @@ class ProjectsComponent extends Component {
         title={titleConfig}  />
         {isOffline ? <View style={Style.globalStyle.offlineView}><Text style={Style.globalStyle.offlineText}>{Style.OFFLINE_TEXT}</Text></View> : null}
 
-        <Text style={styles.welcomeText}>{'Welcome! '}</Text>
+        <Text style={styles.profileBalance}>{`Your balance is ${profile.amount} Coins`}</Text>
+
         { !this.state.isIOS ? <TouchableHighlight style={{backgroundColor: Style.ROW_BACKGROUND, width: 150, height: 40, justifyContent: 'center', alignItems: 'center'}}
                                                   onPress={this.handleShowMenu.bind(this)}>
           <Text>{'Open Menu'}</Text>
@@ -103,8 +106,9 @@ class ProjectsComponent extends Component {
           automaticallyAdjustContentInsets={false}
           contentInset={{bottom:49}}
           removeClippedSubviews={false}
+          refreshControl={<RefreshControl refreshing={this.state.refreshing} onRefresh={this._onRefresh.bind(this)} />}
           //renderScrollComponent={props => <RecyclerViewBackedScrollView {...props} />}
-          renderSeparator={this._renderSeperator}
+          //renderSeparator={this._renderSeperator}
         />
 
         <Spinner visible={this.state.animating} color={Style.STATUSBAR_BACKGOUND} />
@@ -118,25 +122,29 @@ class ProjectsComponent extends Component {
       return (
           <TouchableHighlight key={`${rowData.name}_${product.id}`} style={styles.featureItemButton} underlayColor={'transparent'} activeOpacity={0.4} onPress={(product) => { this.onBuyPress(product); }}>
             <View>
-              <Image style={styles.rowIcon} source={{uri: `${global.BASE_URL}/vending/v1/${product.imageUrl}`}} />
+              <View style={styles.iconWrapper}><Image style={styles.rowIcon} source={{uri: `${global.BASE_URL}/vending/v1/${product.imageUrl}`}} /></View>
               <Text>{product.name}</Text>
-              <Text>{product.price}</Text>
+              <Text style={styles.priceText}>{`${product.price} Coins`}</Text>
             </View>
-
           </TouchableHighlight>
         )
     });
 
     return (
+    rowData.products.length > 0 ?
       <View style={styles.rowWrapper}>
-
-        <View style={{height: 35}}>
-          <Text>{rowData.name}</Text>
+        <View style={{height: 35, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'}}>
+          <Text style={styles.categoryHeader}>{rowData.name}</Text>
+          <TouchableHighlight  style={styles.seeAllButton} underlayColor={'transparent'} activeOpacity={0.4} onPress={(product) => { this.seeAllPress(rowData); }}>
+            <Text style={styles.seeAllText}>{'See All'}</Text>
+          </TouchableHighlight>
         </View>
-        <ScrollView horizontal={true}>
+        <ScrollView horizontal={true} showsHorizontalScrollIndicator={false}>
           {products}
         </ScrollView>
       </View>
+      : <View/>
+
     );
   }
 
@@ -148,11 +156,20 @@ class ProjectsComponent extends Component {
     );
   }
 
+  _onRefresh() {
+    this.setState({refreshing: true});
+    setTimeout( () => this.loadFeatures(), 400);
+  }
+
   handleShowMenu() {
     this.context.openDrawer();
   }
 
   onBuyPress(rowData: Object) {
+
+  }
+
+  seeAllPress(rowData: Object) {
 
   }
 
@@ -176,7 +193,7 @@ class ProjectsComponent extends Component {
       setTimeout( () => alert('Attention', message) , 300);
       return;
     } finally {
-      this.setState({animating: false});
+      this.setState({animating: false, refreshing: false});
     }
 
   }
@@ -194,33 +211,50 @@ class ProjectsComponent extends Component {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Style.ROW_BACKGROUND,
+    backgroundColor: Style.WHITE_COLOR,
   },
   rowWrapper: {
-    flex: 1
+    flex: 1,
+    marginHorizontal: 7 * Style.RATIO_X
   },
-  welcomeText: {
+  profileBalance: {
     textAlign: 'center',
-    color: Style.INPUT_TEXT_COLOR,
+    color: Style.TEXT_COLOR,
     marginHorizontal: 5,
     marginVertical: 7,
-    fontSize: Style.FONT_SIZE_BIG,
+    fontSize: Style.FONT_SIZE,
   },
   rowIcon: {
-    width: 25 * Style.RATIO_X,
-    height: 25 * Style.RATIO_X,
-    marginHorizontal: 7 * Style.RATIO_X
+    width: 70 * Style.RATIO_X,
+    height: 70 * Style.RATIO_X,
+    margin: 3 * Style.RATIO_X
+  },
+  iconWrapper: {
+    width: 80 * Style.RATIO_X,
+    height: 80 * Style.RATIO_X,
+    borderWidth: 1,
+    borderRadius: 9,
+    borderColor: Style.SEPARATOR_LINE
   },
   featureItemButton: {
     flex: 1,
     width: 100 * Style.RATIO_X
+  },
+  categoryHeader: {
+    fontWeight: 'bold',
+  },
+  seeAllText: {
+    color: Style.BUTTON_COLOR_IOS
+  },
+  priceText: {
+    color: Style.PRICE_COLOR
   }
 });
 
 function select(store) {
   return {
     connectionInfo: store.device.connection,
-    profile: store.profile,
+    profile: store.profile.profile,
     features: store.features.features
     //isLoggedIn: store.user.isLoggedIn
   };

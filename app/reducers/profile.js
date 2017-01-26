@@ -11,7 +11,12 @@ export type State = {
 };
 
 const initialState = {
-  profile: {},
+  profile: {
+    amount : 0,
+    image : '',
+    surname : '',
+    name : ''
+  },
 };
 
 function profile(state: State = initialState, action: Action): State {
