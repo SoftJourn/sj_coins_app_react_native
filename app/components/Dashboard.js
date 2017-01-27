@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 
 var { connect } = require('react-redux');
-var { getFeatures, refreshToken } = require('./../actions');
+var { getFeatures, refreshToken, getFavorites, getProducts, getProfile} = require('./../actions');
 //var Navigator = require('Navigator');
 import NavigationBar from 'react-native-navbar';
 // We Import our Stylesheet
@@ -42,6 +42,9 @@ class ProjectsComponent extends Component {
     profile: Object;
     getFeatures: () => Promise<any>;
     refreshToken: () => Promise<any>;
+    getProducts: () => Promise<any>;
+    getFavorites: () => Promise<any>;
+    getProfile: () => Promise<any>;
     features: Object;
   };
 
@@ -59,14 +62,44 @@ class ProjectsComponent extends Component {
   }
 
   componentWillReceiveProps(nextProps: Object) {
-    if (this.props.features !== nextProps.features) {
-      global.LOG('nextProps.features ', nextProps.features.categories);
-      this.setState({dataSource: this.state.dataSource.cloneWithRows(nextProps.features.categories)});
+    if (this.props.features !== nextProps.features || this.props.products !== nextProps.products || this.props.favorites !== nextProps.favorites) {
+
+      const {products, favorites} = nextProps;
+      let categories = !!nextProps.features.categories ? nextProps.features.categories.slice() : [];
+
+      if (products.length > 0 && !!nextProps.features.categories) {
+        let lastAdded = {name: 'Last Added', products: []};
+        for (let i=0; i < nextProps.features.lastAdded.length; i++ ) {
+          let result = products.filter(function( obj ) {
+            return obj.id == nextProps.features.lastAdded[i];
+          });
+          result.length > 0 && lastAdded.products.push(result[0]);
+        }
+
+        let bestSellers = {name: 'Best Sellers', products: []};
+        for (let j=0; j < nextProps.features.bestSellers.length; j++ ) {
+          let result = products.filter(function( obj ) {
+            return obj.id == nextProps.features.bestSellers[j];
+          });
+          result.length > 0 && bestSellers.products.push(result[0]);
+        }
+        categories.unshift(bestSellers);
+        categories.unshift(lastAdded);
+      }
+
+      if (favorites.length > 0) {
+        let favoritesProducts = {name: 'Favorites', products: favorites};
+        categories.unshift(favoritesProducts);
+      }
+      this.setState({dataSource: this.state.dataSource.cloneWithRows(categories)});
     }
   }
 
   componentDidMount() {
     InteractionManager.runAfterInteractions(() => {
+      this.props.getProducts();
+      this.props.getFavorites();
+      this.props.getProfile();
       this.loadFeatures();
     });
   }
@@ -255,8 +288,9 @@ function select(store) {
   return {
     connectionInfo: store.device.connection,
     profile: store.profile.profile,
-    features: store.features.features
-    //isLoggedIn: store.user.isLoggedIn
+    features: store.features.features,
+    products: store.products.products,
+    favorites: store.favorites.favorites
   };
 }
 
@@ -265,6 +299,9 @@ function actions(dispatch) {
     //logout: () => dispatch(logout()),
     //autoLogin: () => dispatch(autoLogin()),
     getFeatures: () => dispatch(getFeatures()),
+    getFavorites: () => dispatch(getFavorites()),
+    getProducts: () => dispatch(getProducts()),
+    getProfile: () => dispatch(getProfile()),
     refreshToken: () => dispatch(refreshToken())
   }
 }

@@ -12,5 +12,6 @@ module.exports = combineReducers({
   navigation: require('./navigation'),
   profile: require('./profile'),
   products: require('./products'),
-  features: require('./features')
+  features: require('./features'),
+  favorites: require('./favorites')
 });

@@ -10,6 +10,7 @@ const navigationAction = require('./navigation');
 const profileAction = require('./profile');
 const productsAction = require('./products');
 const featuresAction = require('./features');
+const favoritesAction = require('./favorites');
 
 module.exports = {
   ...userActions,
@@ -17,5 +18,6 @@ module.exports = {
   ...navigationAction,
   ...profileAction,
   ...productsAction,
-  ...featuresAction
+  ...featuresAction,
+  ...favoritesAction
 };

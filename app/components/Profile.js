@@ -86,14 +86,12 @@ class ProfileComponent extends Component {
         title={titleConfig} rightButton={rightButton} />
         {isOffline ? <View style={Style.globalStyle.offlineView}><Text style={Style.globalStyle.offlineText}>{Style.OFFLINE_TEXT}</Text></View> : null}
 
-        <View>
-          <Text>{'View Profile Page'}</Text>
 
-          { !this.state.isIOS ? <TouchableHighlight style={{backgroundColor: Style.ROW_BACKGROUND, width: 150, height: 40, justifyContent: 'center', alignItems: 'center'}}
-                                                    onPress={this.handleShowMenu.bind(this)}>
-            <Text>{'Open Menu'}</Text>
-          </TouchableHighlight> : null}
-        </View>
+        { !this.state.isIOS ? <TouchableHighlight style={{backgroundColor: Style.ROW_BACKGROUND, width: 150, height: 40, justifyContent: 'center', alignItems: 'center'}}
+                                                  onPress={this.handleShowMenu.bind(this)}>
+          <Text>{'Open Menu'}</Text>
+        </TouchableHighlight> : null}
+
 
         <View style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
           <Text style={styles.profileInfo}>{profile.name} {profile.surname}</Text>

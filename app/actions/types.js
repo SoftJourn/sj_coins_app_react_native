@@ -14,7 +14,8 @@ export type Action =
     { type: 'SWITCH_TAB', tab: 'home' | 'favorites' | 'all-items' | 'profile' } |
     { type: 'GET_PROFILE', profile: Object } |
     { type: 'GET_PRODUCTS', products: Array<Object>} |
-    { type: 'GET_FEATURES', features: Object}
+    { type: 'GET_FEATURES', features: Object} |
+    { type: 'GET_FAVORITES', favorites: Array<Object>}
   ;
 
 export type Dispatch = (action: Action | ThunkAction | PromiseAction | Array<Action>) => any;

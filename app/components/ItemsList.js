@@ -91,9 +91,6 @@ class ItemsListComponent extends Component {
         </TouchableHighlight> : null}
 
 
-
-
-
         <ListView
           style={{flex: 1}}
           dataSource={this.state.dataSource}
@@ -136,7 +133,7 @@ class ItemsListComponent extends Component {
         </View>
         <View style={{flex: 1, justifyContent: 'center'}}>
           <Text>{rowData.name}</Text>
-          <Text>{rowData.price}</Text>
+          <Text style={styles.priceText}>{`${rowData.price} Coins`}</Text>
         </View>
 
         <View>
@@ -175,11 +172,16 @@ class ItemsListComponent extends Component {
   }
 
   sortList(items, sortingType) {
-    //todo: fix sorting for price
+
     items.sort(function(a,b) {
-      if(a[sortingType.toLowerCase()] < b[sortingType.toLowerCase()]) return -1;
-      if(a[sortingType.toLowerCase()] > b[sortingType.toLowerCase()]) return 1;
-      return 0;
+      if (sortingType.toLowerCase() == 'price') {
+        return a.price - b.price || a.name.localeCompare(b.name);
+      } else {
+        if(a[sortingType.toLowerCase()] < b[sortingType.toLowerCase()]) return -1;
+        if(a[sortingType.toLowerCase()] > b[sortingType.toLowerCase()]) return 1;
+        return 0;
+      }
+
     });
 
     let sortedProducts = Object.assign({}, items);
@@ -208,19 +210,7 @@ class ItemsListComponent extends Component {
     } finally {
       this.setState({animating: false, refreshing: false});
     }
-
-    // let templates = this.props.templates.Data;
-    // this.setState({dataSource: this.state.dataSource.cloneWithRows(templates)});
-
   }
-  //
-  // navigateToLogin() {
-  //   setTimeout( () => {
-  //     this.props.navigator.immediatelyResetRouteStack([{
-  //       login: true
-  //     }])
-  //   }, 400);
-  // }
 
 }
 
@@ -261,6 +251,9 @@ const styles = StyleSheet.create({
   rowText: {
     marginHorizontal: 7 * Style.RATIO_X,
     fontSize: Style.FONT_SIZE
+  },
+  priceText: {
+    color: Style.PRICE_COLOR
   }
 });
 
